@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>粵語拼音朗讀器 Cantonese Jyutping Reader</title>
+<meta name="description" content="貼上繁體中文,即刻有粵語拼音,㩒一下就聽到廣東話發音。免費、免登入、離線可用。">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #ffffff; color: #111111;
+  font-family: -apple-system, "PingFang HK", "Microsoft JhengHei", sans-serif;
+  font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 22px; margin: 8px 0 4px; }
+.sub { color: #555; margin: 0 0 12px; }
+textarea { width: 100%; min-height: 110px; font-size: 18px; padding: 10px;
+  border: 1px solid #999; border-radius: 8px; background: #fff; color: #111; }
+button { font-size: 16px; padding: 10px 16px; border-radius: 8px;
+  border: 1px solid #111; background: #111; color: #fff; cursor: pointer;
+  margin: 8px 6px 8px 0; }
+button.ghost { background: #fff; color: #111; }
+button[aria-pressed="true"] { background: #0a7d0a; border-color: #0a7d0a; }
+#out { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 12px 0;
+  font-size: 22px; line-height: 2.1; min-height: 80px; background: #fff; }
+ruby { ruby-align: center; }
+rt { font-size: 13px; color: #0a7d0a; }
+rt.poly { color: #b26a00; }
+rt.unknown { color: #999; }
+rt.tonechg { color: #7b1fa2; }
+body.tonecolours rt.t1 { color: #c0392b; }
+body.tonecolours rt.t2 { color: #e67e22; }
+body.tonecolours rt.t3 { color: #0a7d0a; }
+body.tonecolours rt.t4 { color: #1565c0; }
+body.tonecolours rt.t5 { color: #6a1b9a; }
+body.tonecolours rt.t6 { color: #00838f; }
+.char { cursor: pointer; border-radius: 4px; padding: 0 1px; }
+.char:hover, .char.playing { background: #fff8e1; }
+.legend { font-size: 14px; color: #555; }
+.note { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px;
+  padding: 10px 12px; font-size: 14px; margin: 16px 0; }
+.foot { color: #777; font-size: 13px; margin: 24px 0; }
+h2 { font-size: 17px; margin: 20px 0 6px; border-bottom: 2px solid #0a7d0a; padding-bottom: 4px; }
+.exbtn { background: #fff; color: #111; border: 1px solid #999; font-size: 14px; padding: 7px 10px; margin: 4px 4px 4px 0; }
+.exbtn b { color: #0a7d0a; }
+.stat { font-size: 14px; color: #555; margin: 6px 0; }
+.polyrow { margin: 6px 0; font-size: 15px; }
+.polybtn { background: #fff; color: #111; border: 1px solid #b26a00; font-size: 14px; padding: 5px 9px; margin: 2px 4px 2px 0; }
+.polybtn.sel { background: #b26a00; color: #fff; }
+.tonechip { display: inline-block; border-radius: 4px; padding: 1px 7px; font-size: 13px; color: #fff; margin: 1px 2px; }
+.qchar { font-size: 44px; text-align: center; margin: 10px 0; }
+.qopt { display: block; width: 100%; background: #fff; color: #111; border: 1px solid #999; margin: 6px 0; font-size: 18px; }
+.qopt.right { background: #0a7d0a; border-color: #0a7d0a; color: #fff; }
+.qopt.wrong { background: #c0392b; border-color: #c0392b; color: #fff; }
+.qopt:disabled { opacity: 1; }
+#quizBox { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin: 8px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>粵語拼音朗讀器 <span style="font-size:15px;color:#555">Cantonese Jyutping Reader</span></h1>
+  <p class="sub">貼上繁體中文,即刻有粵語拼音,㩒任何一個字就聽到廣東話發音。免費、免登入、唔使上傳。</p>
+  <textarea id="in" placeholder="試下貼呢句:我今日去香港食飯,好開心">我今日去香港食飯,好開心</textarea>
+  <div>
+    <button id="go">標粵語拼音</button>
+    <button id="speak" class="ghost">▶ 讀全文</button>
+    <button id="copy" class="ghost">複製拼音</button>
+    <button id="share" class="ghost">複製分享連結</button>
+    <button id="clearText" class="ghost">清除文字</button>
+    <button id="tones" class="ghost" aria-pressed="false">聲調顏色:關</button>
+  </div>
+  <div id="out" aria-live="polite"></div>
+  <p class="legend">綠色 = 拼音 &nbsp;·&nbsp; <span style="color:#b26a00">橙色 = 多音字,㩒下會見晒所有讀音</span> &nbsp;·&nbsp; <span style="color:#7b1fa2">紫色 = 變調 (親屬疊詞,如媽媽 maa4 maa1,唔係字典原音)</span> &nbsp;·&nbsp; 灰色 = 字典未收錄 &nbsp;·&nbsp; 㩒任何一個字 = 單獨讀嗰個字 &nbsp;·&nbsp; 「聲調顏色」開咗之後,1-6 聲會用唔同顏色顯示</p>
+  <p class="stat" id="stats"></p>
+  <p class="stat">聲調: <span class="tonechip" style="background:#c0392b">1 高平</span><span class="tonechip" style="background:#e67e22">2 高升</span><span class="tonechip" style="background:#0a7d0a">3 中平</span><span class="tonechip" style="background:#1565c0">4 低降</span><span class="tonechip" style="background:#6a1b9a">5 低升</span><span class="tonechip" style="background:#00838f">6 低平</span></p>
+
+  <h2>例句例子 Examples</h2>
+  <div id="examples"></div>
+
+  <h2>多音字自選讀音 Polyphones in this text</h2>
+  <div id="polyPanel"><p class="stat">上面段文字暫時未有多音字,試下貼「我行去銀行,行長好長」。</p></div>
+  <p><button id="clearOverrides" class="ghost" type="button">清除自選讀音</button></p>
+
+  <h2>讀音測驗 Pronunciation quiz</h2>
+  <div id="quizBox">
+    <p class="stat">睇住個字,揀啱佢嘅粵語拼音。10 題一局,㩒「聽一聽」可以聽埋發音。最好成績會留喺呢部機。</p>
+    <p><button id="quizStart" type="button">開始測驗 (10 題)</button>
+    <span class="stat" id="quizBest"></span></p>
+    <div id="quizPlay" style="display:none">
+      <p class="stat" id="quizProg"></p>
+      <div class="qchar" id="quizChar"></div>
+      <p style="text-align:center"><button id="quizHear" class="ghost" type="button">🔊 聽一聽</button></p>
+      <div id="quizOpts"></div>
+      <p class="stat" id="quizFeed"></p>
+      <p class="stat" id="quizScore"></p>
+    </div>
+  </div>
+  <div class="note" id="dictNote"></div>
+  <p class="foot">Cantonese Reader — 開放原始碼 (MIT)。發音用裝置內置廣東話語音
+  (speechSynthesis, yue-Hant-HK),唔使聯網、唔使畀錢。字典數據:香港語言學學會
+  粵語拼音字表 (LSHK Jyutping phrase box,經 OpenVanilla 發佈) 及 CanCLID
+  Rime-Cantonese jyut6ping3 字表 (CC BY 4.0);Jyutping 方案屬香港語言學學會。
+  拼音只供學習參考,多音字請以字典為準。輸入嘅文字只留喺你部機(瀏覽器
+  localStorage),唔會上傳。</p>
+</div>
+<script src="data/jyutping-full.js"></script>
+<script src="data/jyutping-mini.js"></script>
+<script>
+/* ES5 only — iOS 16 Safari safe. All processing is local. */
+var DICT = window.JYUTPING_FULL || window.JYUTPING_MINI || {};
+
+/* Graded example texts — every character is in the full dictionary
+   (checked by tests/test_dict.js, section 6). */
+var EXAMPLES = [
+  { title: "打招呼", level: "入門", text: "你好,我今日好開心,聽日見。" },
+  { title: "食飯", level: "入門", text: "我今日去香港食飯,好好食。" },
+  { title: "搭車", level: "初級", text: "我搭地鐵去中環,轉車去金鐘。" },
+  { title: "買嘢", level: "初級", text: "呢件衫幾多錢?平啲得唔得?" },
+  { title: "天氣", level: "中級", text: "今日天氣好好,唔熱唔凍,最啱出去行街。" },
+  { title: "返工", level: "中級", text: "我朝早九點返工,夜晚六點收工,好攰。" },
+  { title: "新聞", level: "高級", text: "香港天文台話,聽日會落雨,氣溫得返十八度。" },
+  { title: "繞口令", level: "挑戰", text: "我鍾意食魚生,佢鍾意食燒鵝,我哋一齊去食飯。" },
+  { title: "親屬變調", level: "入門", text: "媽媽同爸爸去睇婆婆,哥哥帶弟弟妹妹一齊去。" }
+];
+/* Common polyphones: reading -> what it means (only readings that are in
+   the dictionary — checked by tests/test_dict.js, section 6). */
+var POLY_NOTES = {
+  "行": { "hang4": "行路 (walk)", "haang4": "銀行 (bank)" },
+  "長": { "coeng4": "長短 (long)", "zoeng2": "生長 (grow)" },
+  "重": { "cung4": "重複 (repeat)", "zung6": "重量 (heavy)" },
+  "樂": { "lok6": "快樂 (happy)", "ngok6": "音樂 (music)", "ngaau6": "樂昌 (place name)" },
+  "會": { "wui6": "開會 (meet)", "kui2": "會計 (accounting, variant)" },
+  "著": { "zoek6": "著衫 (wear)", "zyu6": "瞓著 (asleep)" },
+  "和": { "wo4": "和平 (peace)", "wo6": "和麵 (knead dough)" },
+  "覺": { "gok3": "覺得 (feel)", "gaau3": "瞓覺 (sleep)" },
+  "教": { "gaau3": "教書 (teach)", "gaau1": "宗教 (religion)" },
+  "差": { "caa1": "差唔多 (almost)", "ci1": "參差 (uneven)" },
+  "便": { "bin6": "方便 (convenient)", "pin4": "便宜 (cheap)" },
+  "傳": { "cyun4": "傳說 (legend)", "zyun6": "自傳 (autobiography)" },
+  "當": { "dong1": "當日 (that day)", "dong3": "上當 (cheated)" },
+  "更": { "gaang1": "三更 (night watch)", "gang1": "更改 (change)", "gang3": "更加 (more)" },
+  "種": { "zung2": "種植 (plant)", "zung3": "種類 (type)" },
+  "聽": { "teng1": "聽嘢 (listen)", "ting1": "聽日 (tomorrow)" }
+};
+/* Tone change (變調) in reduplicated kinship words: the dictionary gives
+   each character its base tone, but when two identical kinship characters
+   form a word one syllable changes tone — 媽媽 is maa4 maa1, not maa1 maa1.
+   These six are the standard textbook cases. The changed readings are
+   sandhi forms, not dictionary entries (弟 dai2, 婆 po2, 哥 go4, 爸 baa4
+   are not readings of those characters on their own), so they live here,
+   not in the dictionary. Tone change wins over a user override inside
+   these words, because the reading there is fixed by the sandhi rule. */
+var TONE_CHANGE = {
+  "媽媽": ["maa4", "maa1"],
+  "爸爸": ["baa4", "baa1"],
+  "哥哥": ["go4", "go1"],
+  "弟弟": ["dai6", "dai2"],
+  "妹妹": ["mui6", "mui2"],
+  "婆婆": ["po4", "po2"]
+};
+/* Quiz bank: single most-common reading per character (first reading in
+   the dictionary — checked by tests/test_dict.js, section 6). */
+var QUIZ_BANK = [
+  ["我", "ngo5"], ["你", "nei5"], ["好", "hou2"], ["食", "sik6"],
+  ["飯", "faan6"], ["香", "hoeng1"], ["港", "gong2"], ["今", "gam1"],
+  ["日", "jat6"], ["去", "heoi3"], ["唔", "m4"], ["係", "hai6"],
+  ["嘅", "ge3"], ["大", "daai6"], ["細", "sai3"], ["人", "jan4"],
+  ["中", "zung1"], ["國", "gwok3"], ["學", "hok6"], ["生", "saang1"],
+  ["年", "nin4"], ["月", "jyut6"], ["天", "tin1"], ["地", "dei6"],
+  ["山", "saan1"], ["水", "seoi2"], ["火", "fo2"], ["木", "muk6"],
+  ["車", "ce1"], ["路", "lou6"], ["屋", "uk1"], ["錢", "cin4"],
+  ["買", "maai5"], ["賣", "maai6"], ["早", "zou2"], ["晚", "maan5"],
+  ["夜", "je6"], ["紅", "hung4"], ["黃", "wong4"], ["藍", "laam4"],
+  ["綠", "luk6"], ["白", "baak6"], ["黑", "hak1"], ["一", "jat1"],
+  ["二", "ji6"], ["三", "saam1"], ["四", "sei3"], ["五", "ng5"],
+  ["六", "luk6"], ["七", "cat1"], ["八", "baat3"], ["九", "gau2"],
+  ["十", "sap6"], ["愛", "oi3"], ["想", "soeng2"], ["知", "zi1"],
+  ["聽", "teng1"], ["睇", "tai2"], ["做", "zou6"], ["有", "jau5"],
+  ["冇", "mou5"], ["咁", "gam3"], ["咗", "zo2"], ["喺", "hai2"],
+  ["呢", "ni1"], ["啦", "laa1"], ["呀", "aa3"], ["點", "dim2"],
+  ["幾", "gei2"], ["多", "do1"], ["少", "siu2"], ["新", "san1"],
+  ["舊", "gau6"], ["高", "gou1"], ["快", "faai3"], ["慢", "maan6"],
+  ["平", "peng4"], ["貴", "gwai3"], ["坐", "zo6"], ["前", "cin4"],
+  ["後", "hau6"], ["左", "zo2"], ["右", "jau6"], ["東", "dung1"],
+  ["南", "naam4"], ["西", "sai1"], ["北", "bak1"]
+];
+/* User-chosen readings for polyphones, kept on this device only. */
+var OVERRIDES = {};
+try { OVERRIDES = JSON.parse(localStorage.getItem("jyutping-reader-overrides") || "{}") || {}; } catch (e) { OVERRIDES = {}; }
+function saveOverrides() {
+  try { localStorage.setItem("jyutping-reader-overrides", JSON.stringify(OVERRIDES)); } catch (e) {}
+}
+/* Pure: if the user picked a reading for this character and it is one of
+   its readings, that reading goes first; otherwise the order is unchanged. */
+function applyOverride(pys, override) {
+  if (!pys || !override) { return pys; }
+  var i = pys.indexOf(override);
+  if (i <= 0) { return pys; }
+  var out = [override];
+  for (var j = 0; j < pys.length; j++) { if (j !== i) { out.push(pys[j]); } }
+  return out;
+}
+
+function jyutpingOf(ch) {
+  var v = DICT[ch];
+  if (!v) return null;
+  return (typeof v === "string") ? [v] : v;
+}
+function toneClass(py) {
+  var t = py.charAt(py.length - 1);
+  return (t >= "1" && t <= "6") ? " t" + t : "";
+}
+
+function rubyChar(ch, py, cls) {
+  return '<ruby class="char" data-ch="' + esc(ch) + '">' + esc(ch) +
+    '<rt class="' + cls + '">' + esc(py) + "</rt></ruby>";
+}
+
+function render() {
+  var text = document.getElementById("in").value;
+  var out = "";
+  for (var i = 0; i < text.length; i++) {
+    var ch = text.charAt(i);
+    if (ch === "\n") { out += "<br>"; continue; }
+    if (/[\s,，。、;；:：!！?？「」『』()（）"'“”‘’]/.test(ch)) { out += esc(ch); continue; }
+    /* Tone change: two identical kinship characters form one word. */
+    var pair = TONE_CHANGE[text.substring(i, i + 2)];
+    if (pair) {
+      out += rubyChar(ch, pair[0], "tonechg" + toneClass(pair[0]));
+      out += rubyChar(text.charAt(i + 1), pair[1], "tonechg" + toneClass(pair[1]));
+      i++;
+      continue;
+    }
+    var pys = jyutpingOf(ch);
+    if (pys) { pys = applyOverride(pys, OVERRIDES[ch]); }
+    if (!pys) {
+      out += rubyChar(ch, "?", "unknown");
+    } else if (pys.length > 1) {
+      out += rubyChar(ch, pys[0] + "*", "poly" + toneClass(pys[0]));
+    } else {
+      out += rubyChar(ch, pys[0], toneClass(pys[0]).replace(/^ /, ""));
+    }
+  }
+  document.getElementById("out").innerHTML = out || "請輸入中文。";
+  updateStats(text);
+  renderPolyPanel(text);
+  try {
+    localStorage.setItem("jyutping-reader-text", text);
+    if (window.history && history.replaceState) {
+      var url = location.href.split("#")[0] +
+        (text ? "#t=" + encodeURIComponent(text) : "");
+      history.replaceState(null, "", url);
+    }
+  } catch (e) {}
+}
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function pickVoice() {
+  var vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  for (var i = 0; i < vs.length; i++) {
+    if (vs[i].lang === "yue-Hant-HK") return vs[i];
+  }
+  for (var j = 0; j < vs.length; j++) {
+    if (/yue|zh-HK|HK/i.test(vs[j].lang || "")) return vs[j];
+  }
+  return null;
+}
+function speak(text) {
+  if (!window.speechSynthesis) { alert("呢部裝置唔支援語音朗讀。"); return; }
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = "yue-Hant-HK";
+  var v = pickVoice();
+  if (v) u.voice = v;
+  u.rate = 0.9;
+  speechSynthesis.speak(u);
+}
+function plainJyutping() {
+  var text = document.getElementById("in").value;
+  var parts = [];
+  for (var i = 0; i < text.length; i++) {
+    var pair = TONE_CHANGE[text.substring(i, i + 2)];
+    if (pair) { parts.push(pair[0]); parts.push(pair[1]); i++; continue; }
+    var pys = jyutpingOf(text.charAt(i));
+    parts.push(pys ? pys.join("/") : text.charAt(i));
+  }
+  return parts.join(" ");
+}
+function copyText(t, msg) {
+  /* navigator.clipboard can reject (e.g. no permission on iOS Safari):
+     only claim success when the copy actually worked, else fall back. */
+  function done(ok) { alert(ok ? msg : "複製唔到,請手動長按複製。"); }
+  function fallback() {
+    var ta = document.createElement("textarea"); ta.value = t;
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    done(!!ok);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(function () { done(true); }, fallback);
+  } else { fallback(); }
+}
+function shareLink() {
+  return location.href.split("#")[0] +
+    "#t=" + encodeURIComponent(document.getElementById("in").value);
+}
+document.getElementById("go").addEventListener("click", render);
+document.getElementById("speak").addEventListener("click", function () {
+  var t = document.getElementById("in").value;
+  if (!t.replace(/\s/g, "")) { alert("請先輸入文字。"); return; }
+  speak(t);
+});
+document.getElementById("clearText").addEventListener("click", function () {
+  document.getElementById("in").value = "";
+  render();
+});
+document.getElementById("copy").addEventListener("click", function () {
+  copyText(plainJyutping(), "已複製拼音!");
+});
+document.getElementById("share").addEventListener("click", function () {
+  copyText(shareLink(), "已複製分享連結!開連結就會見到同一段文字。");
+});
+document.getElementById("tones").addEventListener("click", function () {
+  var on = document.body.className.indexOf("tonecolours") === -1;
+  document.body.className = on ? "tonecolours" : "";
+  this.setAttribute("aria-pressed", on ? "true" : "false");
+  this.textContent = "聲調顏色:" + (on ? "開" : "關");
+  try { localStorage.setItem("jyutping-reader-tonecolours", on ? "1" : "0"); } catch (e) {}
+});
+document.getElementById("out").addEventListener("click", function (e) {
+  var el = e.target;
+  while (el && !el.getAttribute("data-ch")) el = el.parentNode;
+  if (!el) return;
+  var ch = el.getAttribute("data-ch");
+  var pys = jyutpingOf(ch);
+  if (pys && pys.length > 1) {
+    alert(ch + " 有多個讀音: " + pys.join("、") +
+      "\n(顯示嘅係最常用一個,讀音用裝置語音,請以字典為準。)");
+  }
+  speak(ch);
+});
+/* iOS Safari loads speech voices asynchronously: getVoices() at load
+   often returns [] on the first call, so warm the cache again when the
+   voiceschanged event fires — otherwise pickVoice() finds no yue-Hant-HK
+   voice even though the device has one. */
+function warmVoices() {
+  if (!window.speechSynthesis) { return; }
+  try { speechSynthesis.getVoices(); } catch (e) {}
+}
+if (window.speechSynthesis) {
+  warmVoices();
+  try {
+    if (speechSynthesis.addEventListener) {
+      speechSynthesis.addEventListener("voiceschanged", warmVoices);
+    } else if ("onvoiceschanged" in speechSynthesis) {
+      speechSynthesis.onvoiceschanged = warmVoices;
+    }
+  } catch (e2) {}
+}
+function updateStats(text) {
+  var total = 0, known = 0, poly = 0, unknown = 0, i;
+  for (i = 0; i < text.length; i++) {
+    var ch = text.charAt(i);
+    if (!/[\u3400-\u9FFF\uF900-\uFAFF]/.test(ch)) { continue; }
+    total++;
+    var pys = jyutpingOf(ch);
+    if (!pys) { unknown++; }
+    else { known++; if (pys.length > 1) { poly++; } }
+  }
+  document.getElementById("stats").textContent = total ?
+    "共 " + total + " 個中文字:識 " + known + " 個 (" + Math.round(known / total * 100) +
+    "%),多音字 " + poly + " 個,字典未收錄 " + unknown + " 個。" : "";
+}
+function renderPolyPanel(text) {
+  var seen = {}, list = [], i;
+  for (i = 0; i < text.length; i++) {
+    var ch = text.charAt(i);
+    if (seen[ch]) { continue; }
+    seen[ch] = true;
+    var pys = jyutpingOf(ch);
+    if (pys && pys.length > 1) { list.push(ch); }
+  }
+  var panel = document.getElementById("polyPanel");
+  if (!list.length) {
+    panel.innerHTML = '<p class="stat">上面段文字暫時未有多音字,試下貼「我行去銀行,行長好長」。</p>';
+    return;
+  }
+  var h = "";
+  for (var k = 0; k < list.length; k++) {
+    var ch2 = list[k];
+    var readings = applyOverride(jyutpingOf(ch2), OVERRIDES[ch2]);
+    h += '<div class="polyrow"><b style="font-size:20px">' + esc(ch2) + '</b> ';
+    for (var r = 0; r < readings.length; r++) {
+      var note = (POLY_NOTES[ch2] && POLY_NOTES[ch2][readings[r]]) ? " " + POLY_NOTES[ch2][readings[r]] : "";
+      h += '<button type="button" class="polybtn' + (OVERRIDES[ch2] === readings[r] ? " sel" : "") +
+        '" data-ch="' + esc(ch2) + '" data-py="' + esc(readings[r]) + '">' +
+        esc(readings[r]) + esc(note) + "</button>";
+    }
+    h += "</div>";
+  }
+  h += '<p class="stat">㩒一個讀音,就會將佢設為呢個字嘅首選讀音 (留喺呢部機),上面拼音即刻跟住轉。</p>';
+  panel.innerHTML = h;
+}
+document.getElementById("polyPanel").addEventListener("click", function (e) {
+  var t = e.target;
+  if (!t || !t.getAttribute("data-py")) { return; }
+  OVERRIDES[t.getAttribute("data-ch")] = t.getAttribute("data-py");
+  saveOverrides();
+  render();
+});
+document.getElementById("clearOverrides").addEventListener("click", function () {
+  OVERRIDES = {};
+  saveOverrides();
+  render();
+});
+/* Examples */
+(function () {
+  var h = "";
+  for (var i = 0; i < EXAMPLES.length; i++) {
+    h += '<button type="button" class="exbtn" data-i="' + i + '"><b>' + esc(EXAMPLES[i].level) +
+      "</b> " + esc(EXAMPLES[i].title) + "</button>";
+  }
+  document.getElementById("examples").innerHTML = h;
+})();
+document.getElementById("examples").addEventListener("click", function (e) {
+  var t = e.target;
+  while (t && t.getAttribute && t.getAttribute("data-i") === null) { t = t.parentNode; }
+  if (!t || !t.getAttribute) { return; }
+  document.getElementById("in").value = EXAMPLES[parseInt(t.getAttribute("data-i"), 10)].text;
+  render();
+});
+/* Quiz: pick the Jyutping for the character shown, 10 rounds. */
+var quizQs = [], quizIdx = 0, quizScore = 0, quizStreak = 0, quizBest = 0;
+try { quizBest = parseInt(localStorage.getItem("jyutping-quiz-best") || "0", 10) || 0; } catch (e) { quizBest = 0; }
+function shuffle(arr) {
+  var a = arr.slice(), i, j, tmp;
+  for (i = a.length - 1; i > 0; i--) {
+    j = Math.floor(Math.random() * (i + 1));
+    tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+function quizOptions(correct) {
+  var pool = [];
+  for (var i = 0; i < QUIZ_BANK.length; i++) {
+    if (QUIZ_BANK[i][1] !== correct && pool.indexOf(QUIZ_BANK[i][1]) === -1) {
+      pool.push(QUIZ_BANK[i][1]);
+    }
+  }
+  var distract = shuffle(pool).slice(0, 3);
+  distract.push(correct);
+  return shuffle(distract);
+}
+function showQuizBest() {
+  document.getElementById("quizBest").textContent = quizBest ?
+    "最好成績: " + quizBest + " / 10" : "";
+}
+function startQuiz() {
+  quizQs = shuffle(QUIZ_BANK).slice(0, 10);
+  quizIdx = 0; quizScore = 0; quizStreak = 0;
+  document.getElementById("quizPlay").style.display = "block";
+  showQuestion();
+}
+function showQuestion() {
+  var q = quizQs[quizIdx];
+  document.getElementById("quizProg").textContent = "第 " + (quizIdx + 1) + " / 10 題";
+  document.getElementById("quizChar").textContent = q[0];
+  document.getElementById("quizFeed").textContent = "";
+  document.getElementById("quizScore").textContent = "得分 " + quizScore + " / 10 · 連續答啱 " + quizStreak + " 題";
+  var opts = quizOptions(q[1]);
+  var h = "";
+  for (var i = 0; i < opts.length; i++) {
+    h += '<button type="button" class="qopt" data-py="' + esc(opts[i]) + '">' + esc(opts[i]) + "</button>";
+  }
+  document.getElementById("quizOpts").innerHTML = h;
+}
+document.getElementById("quizOpts").addEventListener("click", function (e) {
+  var t = e.target;
+  if (!t || !t.getAttribute("data-py")) { return; }
+  var q = quizQs[quizIdx];
+  var picked = t.getAttribute("data-py");
+  var btns = document.getElementById("quizOpts").getElementsByTagName("button");
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].disabled = true;
+    if (btns[i].getAttribute("data-py") === q[1]) { btns[i].className += " right"; }
+  }
+  if (picked === q[1]) {
+    quizScore++; quizStreak++;
+    document.getElementById("quizFeed").textContent = "啱! " + q[0] + " 讀 " + q[1] + "。";
+  } else {
+    t.className += " wrong";
+    quizStreak = 0;
+    document.getElementById("quizFeed").textContent = "唔啱 — " + q[0] + " 讀 " + q[1] + ",唔係 " + picked + "。";
+  }
+  document.getElementById("quizScore").textContent = "得分 " + quizScore + " / 10 · 連續答啱 " + quizStreak + " 題";
+  quizIdx++;
+  setTimeout(function () {
+    if (quizIdx < quizQs.length) { showQuestion(); return; }
+    var best = "";
+    if (quizScore > quizBest) {
+      quizBest = quizScore;
+      try { localStorage.setItem("jyutping-quiz-best", String(quizBest)); } catch (e2) {}
+      best = "新紀錄! ";
+    }
+    document.getElementById("quizFeed").textContent = best + "完成!你答啱咗 " + quizScore + " / 10 題。" +
+      (quizScore === 10 ? "滿分,好叻!" : quizScore >= 7 ? "唔錯,繼續努力!" : "慢慢嚟,多聽多讀就會熟。");
+    document.getElementById("quizProg").textContent = "測驗完成";
+    showQuizBest();
+  }, 900);
+});
+document.getElementById("quizStart").addEventListener("click", startQuiz);
+document.getElementById("quizHear").addEventListener("click", function () {
+  if (quizQs.length && quizIdx < quizQs.length) { speak(quizQs[quizIdx][0]); }
+});
+showQuizBest();
+/* Restore: share link (#t=...) wins, else last text from this device. */
+(function () {
+  var fromHash = null;
+  if (location.hash && location.hash.indexOf("#t=") === 0) {
+    try { fromHash = decodeURIComponent(location.hash.slice(3)); } catch (e) {}
+  }
+  var saved = null, tonesOn = false;
+  try {
+    saved = localStorage.getItem("jyutping-reader-text");
+    tonesOn = localStorage.getItem("jyutping-reader-tonecolours") === "1";
+  } catch (e) {}
+  if (fromHash !== null && fromHash !== "") {
+    document.getElementById("in").value = fromHash;
+  } else if (saved !== null && saved !== "") {
+    document.getElementById("in").value = saved;
+  }
+  if (tonesOn) {
+    document.body.className = "tonecolours";
+    var btn = document.getElementById("tones");
+    btn.setAttribute("aria-pressed", "true");
+    btn.textContent = "聲調顏色:開";
+  }
+})();
+document.getElementById("dictNote").textContent =
+  window.JYUTPING_FULL
+    ? "字典狀態:完整版 " + Object.keys(DICT).length +
+      " 個字(香港語言學學會粵語拼音字表 + CanCLID Rime-Cantonese jyut6ping3,見 data/jyutping-full.js)。" +
+      "多音字第一個讀音係最常用一個,其他讀音㩒下就見到。"
+    : "字典狀態:完整版載入唔到,用緊內置示範字典 " + Object.keys(DICT).length +
+      " 個常用字(見 data/jyutping-mini.js)。請檢查 data/jyutping-full.js 是否存在。";
+render();
+</script>
+</body>
+</html>
